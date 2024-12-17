@@ -4,8 +4,7 @@ import importlib
 import importlib.util
 import sys
 from pathlib import Path
-from types import ModuleType
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, cast
 from unittest.mock import patch
 
 from .mocking import MockedModule, build_mock_getitem, build_mock_import
@@ -18,7 +17,7 @@ T = TypeVar("T")
 def analyse_module(
     module_path: str,
     whitelist_modules: list[str],
-    extractor: Callable[[ModuleType], T],
+    extractor: Callable[[MockedModule], T],
     project_root_dir: str | None = None,
 ) -> T:
     if project_root_dir is None:
@@ -43,7 +42,6 @@ def analyse_module(
             project_root_dir_absolute=project_root_dir,
         ),
     ):
-
         original_sys_path = sys.path.copy()
         try:
             sys.path.append(project_root_dir)
@@ -52,14 +50,14 @@ def analyse_module(
             sys.path = original_sys_path
         # due to instrumenting below importlib, the root is skipped
         module.__class__ = MockedModule
-        return extractor(module)
+        return extractor(cast(MockedModule, module))
 
 
 def run(
     runner_kind: RunnerKind,
     module_path: str,
     whitelist_modules: list[str],
-    extractor: Callable[[ModuleType], T],
+    extractor: Callable[[MockedModule], T],
     project_root_dir: str | None = None,
     *runner_args,
     **runner_kwargs,
