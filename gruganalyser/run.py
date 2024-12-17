@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import importlib
 import importlib.util
+import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Callable, TypeVar
@@ -17,24 +19,37 @@ def analyse_module(
     module_path: str,
     whitelist_modules: list[str],
     extractor: Callable[[ModuleType], T],
+    project_root_dir: str | None = None,
 ) -> T:
-    project_root_dir = str(find_package_boundary(Path(module_path)))
-    project_root_module = project_root_dir.replace("/", ".")
-    project_root_dir_absolute = str(Path(project_root_dir).absolute())
+    if project_root_dir is None:
+        project_root_dir = str(find_package_boundary(Path(module_path).resolve()))
+    module_dotted_path = (
+        str(Path(module_path).resolve())
+        .removeprefix(project_root_dir)
+        .removeprefix("/")
+        .removesuffix(".py")
+        .replace("/", ".")
+    )
+
     with patch(
         "builtins.__import__",
         build_mock_import(
-            project_root_module=project_root_module,
-            project_root_dir_absolute=project_root_dir_absolute,
+            project_root_dir_absolute=project_root_dir,
             whitelist_modules=set(whitelist_modules),
         ),
     ), patch(
         "os._Environ.__getitem__",
         build_mock_getitem(
-            project_root_module=project_root_module,
+            project_root_dir_absolute=project_root_dir,
         ),
     ):
-        module = importlib.import_module(module_path)
+
+        original_sys_path = sys.path.copy()
+        try:
+            sys.path.append(project_root_dir)
+            module = importlib.import_module(module_dotted_path)
+        finally:
+            sys.path = original_sys_path
         # due to instrumenting below importlib, the root is skipped
         module.__class__ = MockedModule
         return extractor(module)
@@ -45,6 +60,7 @@ def run(
     module_path: str,
     whitelist_modules: list[str],
     extractor: Callable[[ModuleType], T],
+    project_root_dir: str | None = None,
     *runner_args,
     **runner_kwargs,
 ) -> T:
@@ -53,4 +69,5 @@ def run(
         module_path=module_path,
         whitelist_modules=whitelist_modules,
         extractor=extractor,
+        project_root_dir=project_root_dir,
     )

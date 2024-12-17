@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import builtins
 import importlib
 import importlib.util
@@ -14,7 +15,6 @@ class MockedModule(ModuleType):
 
 
 def build_mock_import(
-    project_root_module: str,
     project_root_dir_absolute: str,
     whitelist_modules: set[str],
 ):
@@ -40,10 +40,13 @@ def build_mock_import(
         # we use package to see if we are in user provided code
         if globals is None:
             package = None
+            file = None
         else:
             package = globals.get("__package__", None)
+            file = globals.get("__file__", None)
 
-        if isinstance(package, str) and not package.startswith(project_root_module):
+
+        if isinstance(file, str) and not file.startswith(project_root_dir_absolute):
             return bail()
 
         # we get here only if we are importing from user code
@@ -53,7 +56,7 @@ def build_mock_import(
                 f"cant find module '{'.'*level}{name}' for package = '{package}'. "
                 f"This is likely not an issue of the analyser but an absolute import. "
                 f"Use relative imports because from this tool's perspective all code "
-                f"is in submodules of the '{project_root_module}' module"
+                f"is in submodules of the package in '{project_root_dir_absolute}'"
             )
 
         if (

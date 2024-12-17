@@ -1,9 +1,10 @@
 from __future__ import annotations
-import os
+
 import inspect
+import os
 
 
-def build_mock_getitem(project_root_module: str):
+def build_mock_getitem(project_root_dir_absolute: str):
     original_getitem = os._Environ.__getitem__
 
     def mock_getitem(self: os._Environ, key):
@@ -16,7 +17,7 @@ def build_mock_getitem(project_root_module: str):
             )
 
         # dont touch other peoples code
-        if not frame.f_back.f_globals["__package__"].startswith(project_root_module):
+        if not frame.f_back.f_globals["__file__"].startswith(project_root_dir_absolute):
             return original_getitem(self, key)
 
         try:
