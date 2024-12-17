@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grug-analyser"
+version = "0.1.0"
+description = "A grug analyser for dealing with genius code"
+readme = "README.md"
+authors = [
+    { name = "Ilya Maleki", email = "iliyamalecki@gmail.com" }
+]
+license = { text = "Unlicense" }
+requires-python = ">=3.10"
+dependencies = [
+]
