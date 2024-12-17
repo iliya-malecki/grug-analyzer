@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import itertools
 import queue
-from abc import ABC, abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, Literal, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
+
+from .abstract import Runner
 
 if TYPE_CHECKING:
     from multiprocessing import Process, Queue
@@ -15,26 +16,8 @@ else:
 P = ParamSpec("P")
 T = TypeVar("T")
 
-RunnerKind = Literal["process", "plain"]
 
-registry: dict[RunnerKind, type[Runner]] = {}
-
-
-class Runner(ABC):
-    @abstractmethod
-    def run(
-        self,
-        target_function: Callable[P, T],
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> T: ...
-
-    def __init_subclass__(cls, key: RunnerKind) -> None:
-        assert cls.__name__.lower().startswith(key)
-        registry[key] = cls
-
-
-class ProcessRunner(Runner, key="process"):
+class ProcessRunner(Runner):
     def __init__(
         self,
         timeout: float | None,
@@ -84,7 +67,7 @@ class ProcessRunner(Runner, key="process"):
         )
 
 
-class PlainRunner(Runner, key="plain"):
+class PlainRunner(Runner):
     def run(
         self,
         target_function: Callable[P, T],

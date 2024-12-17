@@ -8,7 +8,7 @@ from typing import Callable, TypeVar, cast
 from unittest.mock import patch
 
 from .mocking import MockedModule, build_mock_getitem, build_mock_import
-from .runners import RunnerKind, registry
+from .runners.runners import Runner
 from .util import find_package_boundary
 
 T = TypeVar("T")
@@ -20,10 +20,13 @@ def analyse_module(
     extractor: Callable[[MockedModule], T],
     project_root_dir: str | None = None,
 ) -> T:
+    resolved_module = Path(module_path).resolve()
+    if not Path(resolved_module).exists():
+        raise FileNotFoundError(f"File {resolved_module} does not exist")
     if project_root_dir is None:
-        project_root_dir = str(find_package_boundary(Path(module_path).resolve()))
+        project_root_dir = str(find_package_boundary(resolved_module))
     module_dotted_path = (
-        str(Path(module_path).resolve())
+        str(resolved_module)
         .removeprefix(project_root_dir)
         .removeprefix("/")
         .removesuffix(".py")
@@ -54,15 +57,13 @@ def analyse_module(
 
 
 def run(
-    runner_kind: RunnerKind,
+    runner: Runner,
     module_path: str,
     whitelist_modules: list[str],
     extractor: Callable[[MockedModule], T],
     project_root_dir: str | None = None,
-    *runner_args,
-    **runner_kwargs,
 ) -> T:
-    return registry[runner_kind](*runner_args, **runner_kwargs).run(
+    return runner.run(
         analyse_module,
         module_path=module_path,
         whitelist_modules=whitelist_modules,

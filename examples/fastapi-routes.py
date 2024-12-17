@@ -1,4 +1,4 @@
-from gruganalyser import run, MockedModule
+from gruganalyser import run, MockedModule, ProcessRunner
 
 
 def extract_routes(module: MockedModule):
@@ -8,10 +8,9 @@ def extract_routes(module: MockedModule):
 if __name__ == "__main__":
     print(
         run(
-            "process",
+            ProcessRunner(timeout=None),
             "models/test_service/app/main.py",
             ["fastapi", "pydantic"],
             extract_routes,
-            timeout=None,
         ),
     )
