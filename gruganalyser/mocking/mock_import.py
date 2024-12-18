@@ -77,6 +77,8 @@ def build_mock_import(
 
         mock = MagicMock(name=name)
         mock.__spec__ = spec
+        if spec.submodule_search_locations is not None:
+            mock.__path__ = spec.submodule_search_locations
         return mock
 
     return safe_import
