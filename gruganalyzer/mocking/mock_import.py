@@ -6,6 +6,7 @@ import sys
 from functools import partial
 from types import ModuleType
 from unittest.mock import MagicMock
+from pathlib import Path
 
 
 class ModuleWithMocks(ModuleType):
@@ -16,9 +17,24 @@ class ModuleWithMocks(ModuleType):
     ...
 
 
+# decided against subclassing since all interesting objects
+# will be a.long.chain.away.from.module, and __class__ shenanigans dont go well
+# with MagicMock.__getattr__
+# (Thus i cant return MagicMock from my subclass __getattr__ without fully reimplementing it)
+def MockedModule(name: str, spec):
+    mock = MagicMock(name=name)
+    mock.__spec__ = spec
+    return mock
+
+
+def is_mocked_module(mock: MagicMock):
+    return hasattr(mock, "__spec__")
+
+
 def build_mock_import(
     project_path_prefix: str,
     whitelist_modules: set[str],
+    allow_uninstalled=False,
 ):
     original_import = builtins.__import__
 
@@ -62,13 +78,32 @@ def build_mock_import(
         spec = PathFinder.find_spec(rootname)
 
         if spec is None:
-            bail()  # attempt to raise the normal exception
-            raise ModuleNotFoundError(
-                f"cant find module '{'.'*level}{name}'. "
-                "This is likely not an issue of the analyser but an import system "
-                "misunderstanding. Check that you use relative imports or have the "
-                "correct sys.path"
-            )
+            if not allow_uninstalled:
+                bail()  # attempt to raise the normal exception
+                raise ModuleNotFoundError(
+                    f"cant find module '{'.'*level}{name}'. "
+                    "This is likely not an issue of the analyser but an import system "
+                    "misunderstanding. Check that you use relative imports or have the "
+                    "correct sys.path"
+                )
+            else:
+                if file is None:
+                    raise ModuleNotFoundError(
+                        f"cant find neither '{rootname}' module nor __file__ in caller "
+                        "globals, this makes no sense"
+                    )
+                for sibling in Path(file).parent.iterdir():
+                    if sibling.name.removesuffix(".py") == rootname:
+                        raise ModuleNotFoundError(
+                            f"there is '{rootname}' module in {Path(file).parent} "
+                            "but python's import system failed to find it. "
+                            "Either make your imports relative, or fix your sys.path, "
+                            "or install your missing package "
+                            "(if you meant it as a site package) - "
+                            "current setup is ambiguous"
+                        )
+
+                return MockedModule(name, spec)
 
         # origin can be none for namespace packages
         if spec.origin is not None:
@@ -81,7 +116,6 @@ def build_mock_import(
             res.__class__ = ModuleWithMocks
             return res
 
-        mock = MagicMock(name=name)
-        return mock
+        return MockedModule(name, spec)
 
     return safe_import

@@ -19,6 +19,7 @@ def analyse_module(
     whitelist_modules: list[str],
     extractor: Callable[[ModuleWithMocks], T],
     project_boundary: str | None = None,
+    allow_uninstalled=False,
 ) -> T:
     resolved_module = Path(module_path).resolve()
     if not Path(resolved_module).exists():
@@ -39,6 +40,7 @@ def analyse_module(
         build_mock_import(
             project_path_prefix=f"{project_boundary}/{package_root}",
             whitelist_modules=set(whitelist_modules),
+            allow_uninstalled=allow_uninstalled,
         ),
     ), patch(
         "os._Environ.__getitem__",
@@ -63,6 +65,7 @@ def run(
     whitelist_modules: list[str],
     extractor: Callable[[ModuleWithMocks], T],
     project_boundary: str | None = None,
+    allow_uninstalled=False,
 ) -> T:
     return runner.run(
         analyse_module,
@@ -70,4 +73,5 @@ def run(
         whitelist_modules=whitelist_modules,
         extractor=extractor,
         project_boundary=project_boundary,
+        allow_uninstalled=allow_uninstalled,
     )
