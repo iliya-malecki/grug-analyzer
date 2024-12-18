@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import io
 import itertools
 import queue
+import sys
+from contextlib import redirect_stderr
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
 
@@ -15,6 +18,24 @@ else:
 
 P = ParamSpec("P")
 T = TypeVar("T")
+
+
+class RemoteException(Exception):
+    def __init__(self, repr: str, exception: Exception) -> None:
+        self.repr = repr
+        self.exception = exception
+        super().__init__(repr)
+
+    def __reduce__(self):
+        return (self.__class__, (self.repr, self.exception))
+
+
+def format_exception(
+    exc_type: type[BaseException], exc_value: BaseException, exc_traceback
+):
+    with io.StringIO() as buf, redirect_stderr(buf):
+        sys.excepthook(exc_type, exc_value, exc_traceback)
+        return buf.getvalue()
 
 
 class ProcessRunner(Runner):
@@ -35,7 +56,15 @@ class ProcessRunner(Runner):
             try:
                 q.put((target_function(*args, **kwargs), None))
             except Exception as e:
-                q.put((None, e))
+                q.put(
+                    (
+                        None,
+                        RemoteException(
+                            format_exception(type(e), e, e.__traceback__),
+                            exception=e,
+                        ),
+                    )
+                )
 
         q = Queue()
         process = Process(target=wrapper, args=(q, *args), kwargs=kwargs)
@@ -55,11 +84,11 @@ class ProcessRunner(Runner):
                         "The subprocess loading your code crashed, likely due to an OOM. "
                         "Hint: if you have heavy objects in global scope of your (sub)modules, "
                         "dont whitelist them for full import and let them lazyload"
-                    )
+                    ) from None
                 else:
                     continue
             if err is not None:
-                raise err
+                raise err.exception from err
 
             return ok
         raise TimeoutError(
