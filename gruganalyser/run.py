@@ -32,17 +32,18 @@ def analyse_module(
         .removesuffix(".py")
         .replace("/", ".")
     )
+    package_root = module_dotted_path.split(".", 1)[0]
 
     with patch(
         "builtins.__import__",
         build_mock_import(
-            project_path_prefix=project_boundary,
+            project_path_prefix=f"{project_boundary}/{package_root}",
             whitelist_modules=set(whitelist_modules),
         ),
     ), patch(
         "os._Environ.__getitem__",
         build_mock_getitem(
-            project_path_prefix=project_boundary,
+            project_path_prefix=f"{project_boundary}/{package_root}",
         ),
     ):
         original_sys_path = sys.path.copy()
