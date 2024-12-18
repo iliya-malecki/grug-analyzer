@@ -21,6 +21,7 @@ def analyse_module(
     extractor: Callable[[ModuleWithMocks], T],
     project_boundary: str | None = None,
     allow_uninstalled=False,
+    mocked_env_value=b"__mocked__",
 ) -> T:
     resolved_module = Path(module_path).resolve()
     if not resolved_module.exists():
@@ -47,6 +48,7 @@ def analyse_module(
         "os._Environ.__getitem__",
         build_mock_getitem(
             project_path_prefix=f"{project_boundary}/{package_root}",
+            mocked_value=mocked_env_value,
         ),
     ):
         original_sys_path = sys.path.copy()
@@ -68,6 +70,7 @@ def run(
     extractor: Callable[[ModuleWithMocks], T],
     project_boundary: str | None = None,
     allow_uninstalled=False,
+    mocked_env_value=b"__mocked__",
 ) -> T:
     return runner.run(
         analyse_module,
@@ -76,4 +79,5 @@ def run(
         extractor=extractor,
         project_boundary=project_boundary,
         allow_uninstalled=allow_uninstalled,
+        mocked_env_value=mocked_env_value,
     )

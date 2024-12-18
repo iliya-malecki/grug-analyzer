@@ -4,7 +4,7 @@ import inspect
 import os
 
 
-def build_mock_getitem(project_path_prefix: str):
+def build_mock_getitem(project_path_prefix: str, mocked_value: bytes):
     original_getitem = os._Environ.__getitem__
 
     def mock_getitem(self: os._Environ, key):
@@ -23,6 +23,6 @@ def build_mock_getitem(project_path_prefix: str):
         try:
             return original_getitem(self, key)
         except KeyError:
-            return self.decodevalue(b"__mocked__")
+            return self.decodevalue(mocked_value)
 
     return mock_getitem

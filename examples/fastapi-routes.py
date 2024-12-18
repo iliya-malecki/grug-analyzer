@@ -1,4 +1,4 @@
-from gruganalyzer import run, ModuleWithMocks, ProcessRunner
+from gruganalyzer import run, ModuleWithMocks
 
 
 def extract_routes(module: ModuleWithMocks):
@@ -8,9 +8,9 @@ def extract_routes(module: ModuleWithMocks):
 if __name__ == "__main__":
     print(
         run(
-            ProcessRunner(timeout=None),
-            "models/test_service/app/main.py",
-            ["fastapi", "pydantic"],
-            extract_routes,
+            module_path="test-service/app/main.py",
+            whitelist_modules=["fastapi", "pydantic"],
+            extractor=extract_routes,
+            mocked_env_value=b"42",
         ),
     )

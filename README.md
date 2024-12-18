@@ -17,23 +17,21 @@ To analyse the lazy-loaded module and extract the necessary information, you wil
 
 Take a look at the example of using grug analyzer to pull out routes out of a fastapi app
 ```python
-from gruganalyser import run, MockedModule
+from gruganalyzer import run, ModuleWithMocks
 
 
-def extract_routes(module: MockedModule):
+def extract_routes(module: ModuleWithMocks):
     return [route.path for route in module.app.routes]
 
 
 if __name__ == "__main__":
     print(
         run(
-            "process",
-            "models/test_service/app/main.py",
-            ["fastapi", "pydantic"],
-            extract_routes,
-            timeout=None,
+            module_path="test-service/app/main.py",
+            whitelist_modules=["fastapi", "pydantic"],
+            extractor=extract_routes,
         ),
     )
-
+    
 ```
 
