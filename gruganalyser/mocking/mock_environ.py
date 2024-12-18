@@ -4,7 +4,7 @@ import inspect
 import os
 
 
-def build_mock_getitem(project_root_dir_absolute: str):
+def build_mock_getitem(project_path_prefix: str):
     original_getitem = os._Environ.__getitem__
 
     def mock_getitem(self: os._Environ, key):
@@ -17,7 +17,7 @@ def build_mock_getitem(project_root_dir_absolute: str):
             )
 
         # dont touch other peoples code
-        if not frame.f_back.f_globals["__file__"].startswith(project_root_dir_absolute):
+        if not frame.f_back.f_globals["__file__"].startswith(project_path_prefix):
             return original_getitem(self, key)
 
         try:

@@ -9,13 +9,16 @@ from types import ModuleType
 from unittest.mock import MagicMock
 
 
-class MockedModule(ModuleType):
-    def __repr__(self) -> builtins.str:
-        return f"mocked<{super().__repr__()}>"
+class ModuleWithMocks(ModuleType):
+    """
+    A module where imported objects can be MagicMock-s
+    """
+
+    ...
 
 
 def build_mock_import(
-    project_root_dir_absolute: str,
+    project_path_prefix: str,
     whitelist_modules: set[str],
 ):
     original_import = builtins.__import__
@@ -46,17 +49,18 @@ def build_mock_import(
             file = globals.get("__file__", None)
 
 
-        if isinstance(file, str) and not file.startswith(project_root_dir_absolute):
+        if isinstance(file, str) and not file.startswith(project_path_prefix):
             return bail()
 
         # we get here only if we are importing from user code
         spec = importlib.util.find_spec(f"{'.'*level}{name}", package=package)
         if spec is None:
+            bail()  # attempt to raise the normal exception
             raise ModuleNotFoundError(
                 f"cant find module '{'.'*level}{name}' for package = '{package}'. "
-                f"This is likely not an issue of the analyser but an absolute import. "
-                f"Use relative imports because from this tool's perspective all code "
-                f"is in submodules of the package in '{project_root_dir_absolute}'"
+                "This is likely not an issue of the analyser but an import system "
+                "misunderstanding. Check that you use relative imports or have the "
+                "correct sys.path"
             )
 
         if (
@@ -66,13 +70,11 @@ def build_mock_import(
         ):
             return bail()
 
-        if spec.origin.startswith(project_root_dir_absolute):  # if user code
+        if spec.origin.startswith(project_path_prefix):  # if user code
             res = bail()
-            res.__class__ = MockedModule
+            res.__class__ = ModuleWithMocks
             return res
 
-        # at this point this is an absolute import
-        # TODO: simplify the code addressing that
         mock = MagicMock(name=name)
         mock.__spec__ = spec
         return mock

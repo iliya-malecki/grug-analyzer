@@ -1,7 +1,7 @@
-from gruganalyser import run, MockedModule, ProcessRunner
+from gruganalyser import run, ModuleWithMocks, ProcessRunner
 
 
-def extract_routes(module: MockedModule):
+def extract_routes(module: ModuleWithMocks):
     return [route.path for route in module.app.routes]
 
 
