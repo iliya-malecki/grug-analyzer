@@ -3,9 +3,9 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gruganalyser"
+name = "gruganalyzer"
 version = "0.1.0"
-description = "A grug analyser for dealing with genius code"
+description = "A grug analyzer for dealing with genius code"
 readme = "README.md"
 authors = [
     { name = "Ilya Maleki", email = "iliyamalecki@gmail.com" }

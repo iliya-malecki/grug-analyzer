@@ -1,4 +1,4 @@
-from gruganalyser import run, ModuleWithMocks, ProcessRunner
+from gruganalyzer import run, ModuleWithMocks, ProcessRunner
 
 
 def extract_routes(module: ModuleWithMocks):
