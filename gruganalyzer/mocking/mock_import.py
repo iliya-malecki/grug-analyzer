@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import builtins
-import importlib
-import importlib.util
+from importlib.machinery import PathFinder
 import sys
 from functools import partial
 from types import ModuleType
@@ -40,45 +39,49 @@ def build_mock_import(
             level=level,
         )
 
-        # we use package to see if we are in user provided code
         if globals is None:
-            package = None
             file = None
         else:
-            package = globals.get("__package__", None)
             file = globals.get("__file__", None)
-
 
         if isinstance(file, str) and not file.startswith(project_path_prefix):
             return bail()
 
-        # we get here only if we are importing from user code
-        spec = importlib.util.find_spec(f"{'.'*level}{name}", package=package)
+        rootname = name.split(".", 1)[0]
+        if (
+            rootname in sys.stdlib_module_names  # if stdlib
+            or rootname in whitelist_modules  # if explicitly allowed
+        ):
+            return bail()
+
+        if level > 0:
+            res = bail()
+            res.__class__ = ModuleWithMocks
+            return res
+
+        spec = PathFinder.find_spec(rootname)
+
         if spec is None:
             bail()  # attempt to raise the normal exception
             raise ModuleNotFoundError(
-                f"cant find module '{'.'*level}{name}' for package = '{package}'. "
+                f"cant find module '{'.'*level}{name}'. "
                 "This is likely not an issue of the analyser but an import system "
                 "misunderstanding. Check that you use relative imports or have the "
                 "correct sys.path"
             )
 
-        if (
-            spec.name in sys.stdlib_module_names  # if stdlib
-            or spec.origin is None  # if stdlib
-            or spec.name.split(".")[0] in whitelist_modules  # if explicitly allowed
-        ):
-            return bail()
-
-        if spec.origin.startswith(project_path_prefix):  # if user code
+        # origin can be none for namespace packages
+        if spec.origin is not None:
+            spec_path = spec.origin
+        else:
+            assert spec.submodule_search_locations is not None
+            spec_path = spec.submodule_search_locations[0]
+        if spec_path.startswith(project_path_prefix):  # if user code
             res = bail()
             res.__class__ = ModuleWithMocks
             return res
 
         mock = MagicMock(name=name)
-        mock.__spec__ = spec
-        if spec.submodule_search_locations is not None:
-            mock.__path__ = spec.submodule_search_locations
         return mock
 
     return safe_import
