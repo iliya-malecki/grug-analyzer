@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from .mocking import ModuleWithMocks, build_mock_getitem, build_mock_import
 from .runners.runners import Runner
+from .runners import ProcessRunner
 from .util import find_package_boundary
 
 T = TypeVar("T")
@@ -22,7 +23,7 @@ def analyse_module(
     allow_uninstalled=False,
 ) -> T:
     resolved_module = Path(module_path).resolve()
-    if not Path(resolved_module).exists():
+    if not resolved_module.exists():
         raise FileNotFoundError(f"File {resolved_module} does not exist")
     if project_boundary is None:
         project_boundary = str(find_package_boundary(resolved_module))
@@ -60,7 +61,8 @@ def analyse_module(
 
 
 def run(
-    runner: Runner,
+    *,
+    runner: Runner = ProcessRunner(timeout=None),
     module_path: str,
     whitelist_modules: list[str],
     extractor: Callable[[ModuleWithMocks], T],
